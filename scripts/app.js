@@ -8,7 +8,20 @@ const App = {
   supabase: null,
 
   async init() {
-    this.supabase = window.mockSupabase;
+    // Try real Supabase first, fallback to mock
+    let backendClient = window.mockSupabase;
+    
+    try {
+      const realSupabase = window.LuminaraSupabase?.init();
+      if (realSupabase) {
+        backendClient = realSupabase;
+        console.log("%c[LUMINARA] ✓ Using REAL Supabase backend", "color:#22c55e");
+      }
+    } catch (err) {
+      console.log("%c[LUMINARA] Using Mock backend", "color:#64748b");
+    }
+
+    this.supabase = backendClient;
     
     // Apply saved theme
     const savedTheme = localStorage.getItem('luminara_theme');

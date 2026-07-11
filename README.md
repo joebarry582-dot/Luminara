@@ -23,7 +23,10 @@ A complete futuristic full-stack web application simulating a professional NASA-
 
 ## Tech Stack (Demo)
 - **Frontend**: HTML5, CSS3 (glassmorphism, custom properties, animations), Vanilla JS (ES6 modules simulation), Leaflet.js (CDN), Chart.js (CDN)
-- **Backend Simulation**: Custom MockSupabase class using localStorage (mimics tables, auth, realtime subscriptions). Easy to replace with real @supabase/supabase-js.
+- **Backend Options**:
+  - **Mock Mode** (default): Uses `mock-supabase.js` + localStorage — works instantly, no setup.
+  - **Firebase Mode**: Full Firebase integration (Auth + Firestore + Storage) — see instructions below.
+
 - **No external backend needed for demo** - fully functional offline after initial load (CDNs for libs).
 
 ## Project Structure
@@ -97,3 +100,48 @@ Built with ❤️ for space exploration simulation. Command the stars.
 ---
 
 **To customize further**: Edit the JS files. All major functions are commented.
+
+---
+
+## Using Real Supabase (Recommended)
+
+This project now has **full real Supabase support**.
+
+### Setup Steps
+
+1. **Run the Database Schema**
+   - Go to your Supabase project → **SQL Editor**
+   - Copy and paste the entire content of `supabase/schema.sql`
+   - Click **Run**
+
+2. **Get Your Credentials**
+   - Go to **Project Settings → API**
+   - Copy:
+     - **Project URL**
+     - **anon public** key
+
+3. **Configure the App**
+   - Open `scripts/supabase-client.js`
+   - Replace these two lines:
+     ```js
+     const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+     const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
+     ```
+
+4. **Open the App**
+   - Refresh `index.html`
+   - It will automatically connect to your real Supabase project
+
+### What's Included in the Schema
+- All tables with proper types and relationships
+- Row Level Security (RLS) policies
+- Realtime enabled on `reports` and `chat_messages`
+- Auto profile creation on signup (trigger)
+- Storage bucket + policies for report images
+
+### Production Tips
+- Change RLS policies as needed for your security model
+- Add indexes for better performance on large datasets
+- Use Supabase Edge Functions for complex logic (AI, notifications, etc.)
+
+The mock version is still available as a fallback if Supabase is not configured.

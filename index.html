@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUMINARA • Satellite Command</title>
+    <meta name="description" content="Professional futuristic satellite command center dashboard with realtime collaboration, AI assistance, and GIS capabilities.">
+    
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Main Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    
+    <style>
+        /* Additional inline styles for quick polish if needed */
+        .leaflet-container { background: #0a0f1e; }
+    </style>
+</head>
+<body>
+    <!-- ==================== LOADING SCREEN ==================== -->
+    <div id="loading-screen">
+        <div class="loading-content">
+            <div class="satellite-loader"></div>
+            <div class="loading-text">LUMINARA</div>
+            <div class="loading-subtext">ESTABLISHING SECURE SATELLITE LINK • 2026</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="logo">
+                    <div class="logo-icon">🛰️</div>
+                    <div class="logo-text neon-text">LUMINARA</div>
+                </div>
+                <div class="login-subtitle">Satellite Command Center • CLASSIFIED</div>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="auth-tabs glass">
+                <div class="auth-tab active" onclick="switchAuthTab('login')">SIGN IN</div>
+                <div class="auth-tab" onclick="switchAuthTab('signup')">CREATE ACCOUNT</div>
+            </div>
+
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form active glass" style="padding:32px">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="login-email" class="input" value="admin@luminara.space" placeholder="commander@domain.space">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" class="input" value="password123" placeholder="••••••••">
+                </div>
+                
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" id="remember-me" checked> 
+                        <span style="margin-left:6px">Remember me</span>
+                    </label>
+                    <a href="#" class="forgot-link" onclick="showForgotPassword()">Forgot password?</a>
+                </div>
+
+                <button onclick="handleLogin()" class="btn btn-primary" style="width:100%;padding:15px">ACCESS COMMAND CENTER</button>
+                
+                <div class="auth-footer">
+                    Demo: Use <strong>admin@luminara.space</strong> / password123<br>
+                    or create a new account
+                </div>
+            </div>
+
+            <!-- Signup Form -->
+            <div id="signup-form" class="auth-form glass" style="padding:32px">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="signup-username" class="input" placeholder="StarCommander42">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="signup-email" class="input" placeholder="you@domain.space">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" class="input" placeholder="Create secure password">
+                </div>
+                
+                <button onclick="handleSignup()" class="btn btn-primary" style="width:100%;padding:15px;margin-top:8px">JOIN THE MISSION</button>
+                
+                <div class="auth-footer">
+                    By creating an account you agree to LUMINARA protocols
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN DASHBOARD ==================== -->
+    <div id="dashboard" style="display:none; flex-direction:column; height:100vh">
+        
+        <!-- Top Navigation Bar -->
+        <div class="topbar">
+            <div class="topbar-left">
+                <div style="display:flex;align-items:center;gap:12px">
+                    <div class="logo-icon" style="width:42px;height:42px;font-size:22px">🛰️</div>
+                    <div>
+                        <div style="font-weight:800;letter-spacing:1.5px;font-size:21px">LUMINARA</div>
+                        <div style="font-size:10px;color:var(--text-secondary);margin-top:-3px">SATELLITE COMMAND</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="topbar-right">
+                <!-- Notifications -->
+                <div id="notification-bell" class="btn-icon" style="position:relative">
+                    <i class="fas fa-bell"></i>
+                </div>
+
+                <!-- User Profile -->
+                <div class="user-info" onclick="App.navigateTo('profile')">
+                    <div id="user-avatar"></div>
+                    <div class="user-details">
+                        <div id="user-name" class="user-name">Loading...</div>
+                        <div id="user-role" class="user-role">USER</div>
+                    </div>
+                </div>
+
+                <button onclick="Auth.logout()" class="btn btn-secondary" style="padding:9px 18px;font-size:13px">
+                    <i class="fas fa-sign-out-alt"></i> <span style="margin-left:6px">LOGOUT</span>
+                </button>
+            </div>
+        </div>
+
+        <div style="display:flex; flex:1; overflow:hidden">
+            
+            <!-- Sidebar Navigation -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div style="font-size:12px;color:var(--text-secondary);letter-spacing:1px">MISSION CONTROL</div>
+                </div>
+
+                <div class="nav-item active" data-page="overview" id="nav-overview">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Overview</span>
+                </div>
+                <div class="nav-item" data-page="map" id="nav-map">
+                    <i class="fas fa-globe"></i>
+                    <span>GIS Dashboard</span>
+                </div>
+                <div class="nav-item" data-page="reports" id="nav-reports">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Incident Reports</span>
+                </div>
+                <div class="nav-item" data-page="radio" id="nav-radio">
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>Radio Comms</span>
+                </div>
+                <div class="nav-item" data-page="ai" id="nav-ai" onclick="AI.togglePanel()">
+                    <i class="fas fa-robot"></i>
+                    <span>Lumizia AI</span>
+                </div>
+
+                <div class="nav-section-title">COMMAND</div>
+                
+                <div class="nav-item" data-page="profile" id="nav-profile">
+                    <i class="fas fa-user-astronaut"></i>
+                    <span>Profile &amp; Rank</span>
+                </div>
+                <div class="nav-item" data-page="admin" id="nav-admin" style="display:none">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Admin Console</span>
+                </div>
+                <div class="nav-item" data-page="settings" id="nav-settings" onclick="showSettingsModal()">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                
+                <!-- Overview Page -->
+                <div id="page-overview" class="page active">
+                    <div class="content-header">
+                        <h1><i class="fas fa-satellite"></i> Mission Overview</h1>
+                        <div style="color:var(--text-secondary);font-size:13px">Last sync: moments ago • All systems nominal</div>
+                    </div>
+
+                    <!-- Weather Dashboard -->
+                    <div class="weather-grid">
+                        <div class="glass weather-card">
+                            <div class="weather-label">TEMPERATURE</div>
+                            <div class="weather-value" id="weather-temp">27.4</div>
+                            <div class="weather-unit">°C</div>
+                            <div class="weather-trend">+1.2°</div>
+                        </div>
+                        <div class="glass weather-card">
+                            <div class="weather-label">HUMIDITY</div>
+                            <div class="weather-value" id="weather-humidity">74</div>
+                            <div class="weather-unit">%</div>
+                            <div class="weather-trend" style="background:rgba(234,179,8,0.15);color:#eab308">-3%</div>
+                        </div>
+                        <div class="glass weather-card">
+                            <div class="weather-label">WIND SPEED</div>
+                            <div class="weather-value" id="weather-wind">14</div>
+                            <div class="weather-unit">kts</div>
+                            <div class="weather-trend">SE</div>
+                        </div>
+                        <div class="glass weather-card">
+                            <div class="weather-label">UV INDEX</div>
+                            <div class="weather-value" id="weather-uv">8.2</div>
+                            <div class="weather-unit"></div>
+                            <div class="weather-trend" style="background:rgba(239,68,68,0.15);color:#ef4444">HIGH</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats + Charts -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+                        <div class="glass card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="fas fa-chart-pie"></i> Reports by Severity</div>
+                            </div>
+                            <div style="height:220px"><canvas id="chart-severity"></canvas></div>
+                        </div>
+                        <div class="glass card">
+                            <div class="card-header">
+                                <div class="card-title"><i class="fas fa-chart-line"></i> Weather Telemetry Trend</div>
+                            </div>
+                            <div style="height:220px"><canvas id="chart-weather"></canvas></div>
+                        </div>
+                    </div>
+
+                    <div class="glass card mt-4">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-broadcast-tower"></i> Quick Actions</div>
+                        </div>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap">
+                            <button onclick="App.navigateTo('reports')" class="btn btn-primary"><i class="fas fa-plus"></i> New Incident Report</button>
+                            <button onclick="App.navigateTo('map')" class="btn btn-secondary"><i class="fas fa-globe"></i> Open GIS Dashboard</button>
+                            <button onclick="AI.togglePanel()" class="btn btn-secondary"><i class="fas fa-robot"></i> Consult Lumizia AI</button>
+                            <button onclick="document.getElementById('nav-radio').click()" class="btn btn-secondary"><i class="fas fa-broadcast-tower"></i> Join Radio Channel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAP / GIS Dashboard -->
+                <div id="page-map" class="page">
+                    <div class="content-header">
+                        <h1><i class="fas fa-globe"></i> GIS Command Dashboard</h1>
+                        <div style="display:flex;gap:10px;align-items:center">
+                            <input type="text" id="map-search" class="input" placeholder="Search location..." style="width:260px;padding:9px 16px">
+                            <button id="btn-gps" class="btn btn-secondary"><i class="fas fa-location-arrow"></i> My Location</button>
+                            <button id="btn-measure" class="btn btn-secondary"><i class="fas fa-ruler"></i> Measure</button>
+                        </div>
+                    </div>
+
+                    <div id="map-container" class="glass">
+                        <div id="map"></div>
+                        
+                        <!-- Map Layer Controls -->
+                        <div class="map-controls">
+                            <div class="map-control-btn active" data-layer="satellite"><i class="fas fa-satellite"></i> Satellite</div>
+                            <div class="map-control-btn" data-layer="terrain"><i class="fas fa-mountain"></i> Terrain</div>
+                            <div class="map-control-btn" data-layer="street"><i class="fas fa-road"></i> Street</div>
+                            <div class="map-control-btn" data-layer="dark"><i class="fas fa-moon"></i> Dark</div>
+                            
+                            <div style="height:1px;background:var(--border-glass);margin:8px 0"></div>
+                            
+                            <div id="overlay-weather" class="map-control-btn"><i class="fas fa-cloud"></i> Weather</div>
+                            <div id="overlay-earthquake" class="map-control-btn"><i class="fas fa-globe"></i> Seismic</div>
+                            <div id="overlay-typhoon" class="map-control-btn"><i class="fas fa-wind"></i> Typhoon</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top:12px;font-size:12px;color:var(--text-secondary);display:flex;justify-content:space-between">
+                        <div>Click map to place report location or bookmark • Right-click for advanced tools</div>
+                        <div>Leaflet + Multi-layer GIS • Live synced</div>
+                    </div>
+                </div>
+
+                <!-- REPORTS PAGE -->
+                <div id="page-reports" class="page">
+                    <div class="content-header">
+                        <h1><i class="fas fa-file-alt"></i> Incident Reporting System</h1>
+                        <div>
+                            <select id="filter-status" class="select" style="width:auto;padding:8px 14px">
+                                <option value="all">All Status</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                            <select id="filter-severity" class="select" style="width:auto;padding:8px 14px;margin-left:8px">
+                                <option value="all">All Severity</option>
+                                <option value="critical">Critical</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="reports-container">
+                        <!-- Report Form -->
+                        <div class="glass report-form">
+                            <h3 style="margin-bottom:18px">Submit New Field Report</h3>
+                            
+                            <form id="report-form">
+                                <div class="form-group">
+                                    <label>Report Title</label>
+                                    <input type="text" id="report-title" class="input" placeholder="e.g. Tropical Storm Development" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Description / Observations</label>
+                                    <textarea id="report-desc" class="input" placeholder="Detailed satellite and ground observations..." required></textarea>
+                                </div>
+                                
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                                    <div class="form-group">
+                                        <label>Category</label>
+                                        <select id="report-category" class="select">
+                                            <option>Weather</option>
+                                            <option>Geological</option>
+                                            <option>Maritime</option>
+                                            <option>Aviation</option>
+                                            <option>Environmental</option>
+                                            <option>Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Severity</label>
+                                        <select id="report-severity" class="select">
+                                            <option value="low">Low</option>
+                                            <option value="medium" selected>Medium</option>
+                                            <option value="high">High</option>
+                                            <option value="critical">Critical</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                                    <div class="form-group">
+                                        <label>Latitude</label>
+                                        <input type="number" step="0.00001" id="report-lat" class="input" placeholder="e.g. 12.45">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Longitude</label>
+                                        <input type="number" step="0.00001" id="report-lng" class="input" placeholder="e.g. 145.20">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Attach Satellite Imagery / Photos</label>
+                                    <input type="file" id="report-images" class="input" multiple accept="image/*">
+                                    <div id="image-preview" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"></div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px">SUBMIT TO COMMAND</button>
+                            </form>
+                        </div>
+
+                        <!-- Reports List -->
+                        <div>
+                            <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+                                <div style="font-weight:700">FIELD REPORTS</div>
+                                <div style="font-size:12px;color:var(--text-secondary)" id="reports-count"></div>
+                            </div>
+                            <div id="report-list" class="report-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RADIO PAGE -->
+                <div id="page-radio" class="page">
+                    <div class="content-header">
+                        <h1><i class="fas fa-broadcast-tower"></i> Secure Radio Communications</h1>
+                        <div>
+                            <button onclick="Radio.sendAnnouncement(prompt('Enter official announcement:'))" class="btn btn-danger" style="font-size:12px;padding:8px 16px">
+                                <i class="fas fa-bullhorn"></i> BROADCAST ANNOUNCEMENT
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="radio-container">
+                        <!-- Channels -->
+                        <div>
+                            <div class="glass" style="padding:16px">
+                                <div style="font-weight:700;margin-bottom:12px;padding-left:8px">CHANNELS</div>
+                                <div id="channel-list"></div>
+                            </div>
+                            
+                            <div class="glass online-users" style="margin-top:16px;padding:16px">
+                                <div style="font-weight:700;margin-bottom:12px">ONLINE CREW</div>
+                                <div id="online-users-list" class="user-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Window -->
+                        <div class="glass chat-window">
+                            <div id="chat-messages" class="chat-messages"></div>
+                            
+                            <div id="chat-input-area" style="padding:16px;border-top:1px solid var(--border-glass)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI is floating, but we have a page placeholder -->
+                <div id="page-ai" class="page" style="display:none">
+                    <div class="content-header">
+                        <h1><i class="fas fa-robot"></i> Lumizia AI Assistant</h1>
+                    </div>
+                    <div class="glass card" style="text-align:center;padding:60px">
+                        <div style="font-size:64px;margin-bottom:20px">🧠</div>
+                        <h2>Lumizia is always available</h2>
+                        <p style="color:var(--text-secondary);max-width:420px;margin:16px auto">Click the floating AI button in the bottom right corner to begin your conversation with the satellite intelligence system.</p>
+                        <button onclick="AI.togglePanel()" class="btn btn-primary" style="margin-top:20px">Open Lumizia Chat</button>
+                    </div>
+                </div>
+
+                <!-- PROFILE PAGE -->
+                <div id="page-profile" class="page">
+                    <div class="content-header">
+                        <h1><i class="fas fa-user-astronaut"></i> Operator Profile</h1>
+                    </div>
+                    <div id="profile-content"></div>
+                </div>
+
+                <!-- ADMIN PAGE -->
+                <div id="page-admin" class="page">
+                    <div class="content-header">
+                        <h1><i class="fas fa-shield-alt"></i> Administrator Console</h1>
+                        <div style="color:#ef4444;font-weight:600">RESTRICTED ACCESS</div>
+                    </div>
+                    <div id="admin-content"></div>
+                </div>
+
+                <!-- SETTINGS (simple modal trigger) -->
+                <div id="page-settings" class="page" style="display:none">
+                    <div class="content-header"><h1>Settings</h1></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SCRIPTS ==================== -->
+    <!-- Leaflet -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Core Application Scripts (order matters) -->
+    <script src="scripts/mock-supabase.js"></script>
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/auth.js"></script>
+    <script src="scripts/notifications.js"></script>
+    <script src="scripts/profile.js"></script>
+    <script src="scripts/app.js"></script>
+    <script src="scripts/map.js"></script>
+    <script src="scripts/reports.js"></script>
+    <script src="scripts/ai.js"></script>
+    <script src="scripts/radio.js"></script>
+    <script src="scripts/charts.js"></script>
+    <script src="scripts/admin.js"></script>
+
+    <script>
+        // ==================== GLOBAL HELPER FUNCTIONS ====================
+        
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(el => el.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.auth-tab').classList.add('active');
+                document.getElementById('login-form').classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('signup-form').classList.add('active');
+            }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const remember = document.getElementById('remember-me').checked;
+
+            const success = await Auth.login(email, password, remember);
+            if (success) {
+                // Auth module handles redirect to dashboard
+            }
+        }
+
+        async function handleSignup() {
+            const username = document.getElementById('signup-username').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+
+            if (!username || !email || !password) {
+                utils.showToast('Please fill all fields', 'error');
+                return;
+            }
+
+            const success = await Auth.signup(email, password, username);
+            if (success) {
+                // Auto login after signup in mock
+                setTimeout(() => {
+                    Auth.login(email, password);
+                }, 600);
+            }
+        }
+
+        function showForgotPassword() {
+            const email = prompt('Enter your registered email for password reset link:');
+            if (email) {
+                utils.showToast('Password reset instructions sent to ' + email);
+            }
+        }
+
+        function showSettingsModal() {
+            const modal = document.createElement('div');
+            modal.className = 'modal show';
+            modal.innerHTML = `
+                <div class="modal-content glass" style="max-width:480px">
+                    <div style="padding:28px">
+                        <h2 style="margin-bottom:20px">System Settings</h2>
+                        
+                        <div style="margin-bottom:24px">
+                            <div style="font-weight:600;margin-bottom:10px">Theme</div>
+                            <div style="display:flex;gap:10px">
+                                <button onclick="changeTheme('dark');this.closest('.modal').remove()" class="btn btn-secondary" style="flex:1">Dark Space</button>
+                                <button onclick="changeTheme('blue');this.closest('.modal').remove()" class="btn btn-secondary" style="flex:1">Neon Blue</button>
+                                <button onclick="changeTheme('purple');this.closest('.modal').remove()" class="btn btn-secondary" style="flex:1">Void Purple</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:24px">
+                            <div style="font-weight:600;margin-bottom:10px">Notifications</div>
+                            <label style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                                <input type="checkbox" checked> Enable desktop notifications
+                            </label>
+                            <label style="display:flex;align-items:center;gap:10px">
+                                <input type="checkbox" checked> Sound alerts for critical events
+                            </label>
+                        </div>
+
+                        <div style="margin-bottom:24px">
+                            <div style="font-weight:600;margin-bottom:10px">AI Assistant Voice</div>
+                            <label style="display:flex;align-items:center;gap:10px">
+                                <input type="checkbox" id="ai-voice-toggle" ${localStorage.getItem('luminara_ai_voice') === 'true' ? 'checked' : ''} 
+                                       onchange="localStorage.setItem('luminara_ai_voice', this.checked)"> Auto-speak Lumizia responses
+                            </label>
+                        </div>
+
+                        <div style="text-align:right">
+                            <button onclick="this.closest('.modal').remove()" class="btn btn-primary">Done</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function changeTheme(theme) {
+            document.body.className = theme === 'dark' ? '' : `theme-${theme}`;
+            localStorage.setItem('luminara_theme', theme);
+            utils.showToast(`Theme set to ${theme}`);
+        }
+
+        // Initialize Reports and Radio after DOM ready (they need elements)
+        document.addEventListener('DOMContentLoaded', () => {
+            // These are initialized in App.init via callbacks, but we can also call directly
+            setTimeout(() => {
+                if (window.Reports) Reports.init(window.mockSupabase);
+                if (window.Radio) Radio.init(window.mockSupabase);
+                if (window.AI) AI.init(window.mockSupabase);
+                if (window.Charts) Charts.init();
+                if (window.Admin) Admin.init();
+                
+                // Update reports count badge
+                const updateCount = () => {
+                    const countEl = document.getElementById('reports-count');
+                    if (countEl) {
+                        const reports = JSON.parse(localStorage.getItem('luminara_reports') || '[]');
+                        countEl.textContent = `${reports.length} total reports`;
+                    }
+                };
+                updateCount();
+                setInterval(updateCount, 30000);
+            }, 800);
+
+            // Live weather simulation
+            setInterval(() => {
+                const tempEl = document.getElementById('weather-temp');
+                const humEl = document.getElementById('weather-humidity');
+                const windEl = document.getElementById('weather-wind');
+                
+                if (tempEl) tempEl.textContent = (26.5 + Math.random() * 3).toFixed(1);
+                if (humEl) humEl.textContent = Math.floor(68 + Math.random() * 12);
+                if (windEl) windEl.textContent = Math.floor(11 + Math.random() * 8);
+            }, 22000);
+        });
+
+        // Easter egg / console message
+        console.log('%c[LUMINARA] Futuristic Satellite Command Center ready. All systems nominal.', 'color:#00d4ff; font-family:monospace');
+    </script>
+</body>
+</html>
